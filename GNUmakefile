@@ -1,7 +1,10 @@
-CC ?= gcc -fPIC
-CXX ?= g++ -fPIC
-NVCC ?= nvcc -Xcompiler -fPIC
+CC ?= gcc -fPIC 
+CXX ?= g++ -fPIC 
+NVCC ?= nvcc -Xcompiler -fPIC 
 AR ?= ar
+
+#D:\Program\GOPATH\src\github.com\HcashOrg\gominer\nvidia\CUDA\v7.0\include
+
 # -o is gnu only so this needs to be smarter; it does work because on darwin it
 #  fails which is also not windows.
 ARCH:=$(shell uname -o)
@@ -42,14 +45,16 @@ build: obj/HcashOrg.dll
 else
 build: obj/HcashOrg.a
 endif
-	go build -tags 'cuda'
+	CGO_CFLAGS="-I/c/appsdk/include" CGO_LDFLAGS="-L/c/appsdk/lib/Win32 " go build -tags 'cuda' 
+	#go build -tags 'cuda' 
 
 ifeq ($(ARCH),Msys)
 install: obj/HcashOrg.dll
 else
 install: obj/HcashOrg.a
 endif
-	go install -tags 'cuda'
+	CGO_CFLAGS="-I/c/appsdk/include" CGO_LDFLAGS="-L/c/appsdk/lib/Win32 " go install -tags 'cuda'
+	#go install -tags 'cuda'
 
 clean:
 	rm -rf obj

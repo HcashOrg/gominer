@@ -14,9 +14,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/HcashOrg/hcutil"
 	"github.com/btcsuite/btclog"
 	"github.com/btcsuite/go-flags"
-	"github.com/HcashOrg/hcutil"
 )
 
 const (
@@ -29,12 +29,12 @@ const (
 
 var (
 	minerHomeDir          = hcutil.AppDataDir("gominer", false)
-	hcdHomeDir           = hcutil.AppDataDir("hcd", false)
+	hcdHomeDir            = hcutil.AppDataDir("hcd", false)
 	defaultConfigFile     = filepath.Join(minerHomeDir, defaultConfigFilename)
 	defaultRPCServer      = "localhost"
 	defaultRPCCertFile    = filepath.Join(hcdHomeDir, "rpc.cert")
-	defaultRPCPortMainNet = "9109"
-	defaultRPCPortTestNet = "19109"
+	defaultRPCPortMainNet = "14009" //"9109"
+	defaultRPCPortTestNet = "12009" //"19109"
 	defaultRPCPortSimNet  = "19556"
 	defaultAPIHost        = "localhost"
 	defaultAPIPort        = "3333"
