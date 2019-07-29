@@ -10,7 +10,6 @@ package main
 import "C"
 
 import (
-	"encoding/binary"
 	"fmt"
 	"reflect"
 	"runtime"
@@ -18,12 +17,13 @@ import (
 	"sync/atomic"
 	"time"
 	"unsafe"
-
+	"encoding/binary"
 	"github.com/barnex/cuda5/cu"
 
 	"github.com/HcashOrg/gominer/nvml"
 	"github.com/HcashOrg/gominer/util"
 	"github.com/HcashOrg/gominer/work"
+	"github.com/HcashOrg/hcd/wire"
 )
 
 const (
@@ -91,11 +91,11 @@ type Device struct {
 	quit chan struct{}
 }
 
-func HcashOrgCPUSetBlock52(input *[192]byte) {
+func HcashOrgCPUSetBlock52(input *[256]byte, updateHeight uint32) {
 	if input == nil {
 		panic("input is nil")
 	}
-	C.HcashOrg_cpu_setBlock_52((*C.uint32_t)(unsafe.Pointer(input)))
+	C.HcashOrg_cpu_setBlock_52((*C.uint32_t)(unsafe.Pointer(input)), (C.uint32_t)(updateHeight))
 }
 
 func HcashOrgHashNonce(gridx, blockx, threads uint32, startNonce uint32, nonceResults cu.DevicePtr, targetHigh uint32) {
@@ -303,7 +303,8 @@ func (d *Device) runDevice() error {
 	}
 	nonceResultsHSlice := *(*[]uint32)(unsafe.Pointer(&nonceResultsHSliceHeader))
 
-	endianData := new([192]byte)
+	endianData := new([256]byte)
+
 
 	for {
 		d.updateCurrentWork()
@@ -319,15 +320,29 @@ func (d *Device) runDevice() error {
 		util.RolloverExtraNonce(&d.extraNonce)
 		d.lastBlock[work.Nonce1Word] = util.Uint32EndiannessSwap(d.extraNonce)
 
-		copy(endianData[:], d.work.Data[:128])
-		for i, j := 128, 0; i < 180; {
-			b := make([]byte, 4)
-			binary.BigEndian.PutUint32(b, d.lastBlock[j])
-			copy(endianData[i:], b)
-			i += 4
-			j++
+		height := binary.LittleEndian.Uint32(d.work.Data[128:132])
+		if uint64(height) < wire.AI_UPDATE_HEIGHT{
+			copy(endianData[:], d.work.Data[:128])
+			for i, j := 128, 0; i < 180; {
+				b := make([]byte, 4)
+				binary.BigEndian.PutUint32(b, d.lastBlock[j])
+				copy(endianData[i:], b)
+				i += 4
+				j++
+			}
+			HcashOrgCPUSetBlock52(endianData, uint32(wire.AI_UPDATE_HEIGHT))
+		}else {
+			copy(endianData[:], d.work.Data[:192])
+			for i, j := 192, 0; i < 244; {
+				b := make([]byte, 4)
+				binary.BigEndian.PutUint32(b, d.lastBlock[j])
+				copy(endianData[i:], b)
+				i += 4
+				j++
+			}
+			HcashOrgCPUSetBlock52(endianData, uint32(wire.AI_UPDATE_HEIGHT))
 		}
-		HcashOrgCPUSetBlock52(endianData)
+
 
 		// Update the timestamp. Only solo work allows you to roll
 		// the timestamp.

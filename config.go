@@ -5,6 +5,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/HcashOrg/hcd/wire"
 	"net"
 	"os"
 	"path/filepath"
@@ -14,9 +15,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/HcashOrg/hcutil"
+	"github.com/HcashOrg/hcd/hcutil"
 	"github.com/btcsuite/btclog"
 	"github.com/btcsuite/go-flags"
+	"github.com/HcashOrg/hcd/chaincfg"
 )
 
 const (
@@ -308,13 +310,16 @@ func loadConfig() (*config, []string, error) {
 		return nil, nil, err
 	}
 
+	wire.AI_UPDATE_HEIGHT = chaincfg.MainNetParams.AIUpdateHeight
 	// Multiple networks can't be selected simultaneously.
 	numNets := 0
 	if cfg.TestNet {
 		numNets++
+		wire.AI_UPDATE_HEIGHT = chaincfg.TestNet2Params.AIUpdateHeight
 	}
 	if cfg.SimNet {
 		numNets++
+		wire.AI_UPDATE_HEIGHT = chaincfg.SimNetParams.AIUpdateHeight
 	}
 	if numNets > 1 {
 		str := "%s: The testnet and simnet params can't be used " +

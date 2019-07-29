@@ -17,8 +17,8 @@ var (
 	kernelProcAddr          = kernelDll.MustFindProc("HcashOrg_hash_nonce").Addr()
 )
 
-func cudaPrecomputeTable(input *[192]byte) {
-	syscall.Syscall(precomputeTableProcAddr, 1, uintptr(unsafe.Pointer(input)), 0, 0)
+func cudaPrecomputeTable(input *[256]byte, updateHeight uint32 ) {
+	syscall.Syscall(precomputeTableProcAddr, 2, uintptr(unsafe.Pointer(input)), uintptr(updateHeight), 0)
 }
 
 func cudaInvokeKernel(gridx, blockx, threads uint32, startNonce uint32, nonceResults cu.DevicePtr, targetHigh uint32) {

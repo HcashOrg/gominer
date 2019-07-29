@@ -10,6 +10,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/HcashOrg/hcd/wire"
 	"io/ioutil"
 	"math/big"
 	"net"
@@ -173,7 +174,7 @@ func GetWork() (*work.Work, error) {
 	if err != nil {
 		return nil, err
 	}
-	if len(data) != 192 {
+	if len(data) != 256{
 		return nil, fmt.Errorf("Wrong data length: got %d, expected 192",
 			len(data))
 	}
@@ -189,15 +190,29 @@ func GetWork() (*work.Work, error) {
 	bigTarget := new(big.Int)
 	bigTarget.SetBytes(util.Reverse(target))
 
-	var workData [192]byte
-	copy(workData[:], data)
-	givenTs := binary.LittleEndian.Uint32(
-		workData[128+4*work.TimestampWord : 132+4*work.TimestampWord])
-	w := work.NewWork(workData, bigTarget, givenTs, uint32(time.Now().Unix()), true)
+	//height := binary.Uint32(data[128:132])
+	height := binary.LittleEndian.Uint32(data[128:132])
+	if uint64(height) < wire.AI_UPDATE_HEIGHT{
+		var workData [256]byte
+		copy(workData[:], data)
+		givenTs := binary.LittleEndian.Uint32(
+			workData[128+4*work.TimestampWord : 132+4*work.TimestampWord])
+		w := work.NewWork(workData, bigTarget, givenTs, uint32(time.Now().Unix()), true)
 
-	w.Target = bigTarget
+		w.Target = bigTarget
 
-	return w, nil
+		return w, nil
+	}else{
+		var workData [256]byte
+		copy(workData[:], data)
+		givenTs := binary.LittleEndian.Uint32(
+			workData[192+4*work.TimestampWord : 196+4*work.TimestampWord])
+		w := work.NewWork(workData, bigTarget, givenTs, uint32(time.Now().Unix()), true)
+
+		w.Target = bigTarget
+
+		return w, nil
+	}
 }
 
 // GetPoolWork gets work from a stratum enabled pool

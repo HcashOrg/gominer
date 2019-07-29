@@ -919,7 +919,7 @@ func (s *Stratum) PrepWork() error {
 	workPosition += 4
 	copy(workdata[workPosition:], p)
 	workPosition += 32
-	copy(workdata[workPosition:], cb1[0:108])
+	copy(workdata[workPosition:], cb1[0:108])// ai cb1 is 108 + 60 long
 	workPosition += 108
 	copy(workdata[workPosition:], extraNonce)
 	workPosition = 176
@@ -932,7 +932,8 @@ func (s *Stratum) PrepWork() error {
 		return err
 	}
 
-	var workData [192]byte
+	//var workData [192]byte
+	var workData [256]byte
 	copy(workData[:], workdata[:])
 	givenTs := binary.LittleEndian.Uint32(
 		workData[128+4*work.TimestampWord : 132+4*work.TimestampWord])

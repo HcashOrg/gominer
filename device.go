@@ -5,6 +5,8 @@ package main
 import (
 	"encoding/binary"
 	"encoding/hex"
+
+	"github.com/HcashOrg/hcd/wire"
 	"sync/atomic"
 	"time"
 
@@ -73,21 +75,41 @@ func (d *Device) updateCurrentWork() {
 
 	// Bump and set the work ID if the work is new.
 	//d.currentWorkID++  //d.currentWorkID = 0
-	binary.LittleEndian.PutUint32(d.work.Data[128+4*work.Nonce2Word:],
-		d.currentWorkID)
 
-	// Reset the hash state
-	copy(d.midstate[:], blake256.IV256[:])
+	height := binary.LittleEndian.Uint32(d.work.Data[128:132])
+	if uint64(height) < wire.AI_UPDATE_HEIGHT{
+		binary.LittleEndian.PutUint32(d.work.Data[128+4*work.Nonce2Word:],
+			d.currentWorkID)
+		// Reset the hash state
+		copy(d.midstate[:], blake256.IV256[:])
 
-	// Hash the two first blocks
-	blake256.Block(d.midstate[:], d.work.Data[0:64], 512)
-	blake256.Block(d.midstate[:], d.work.Data[64:128], 1024)
-	minrLog.Tracef("midstate input data for work update %v",
-		hex.EncodeToString(d.work.Data[0:128]))
+		// Hash the two first blocks
+		blake256.Block(d.midstate[:], d.work.Data[0:64], 512)
+		blake256.Block(d.midstate[:], d.work.Data[64:128], 1024)
+		minrLog.Tracef("midstate input data for work update %v",
+			hex.EncodeToString(d.work.Data[0:128]))
 
-	// Convert the next block to uint32 array.
-	for i := 0; i < 16; i++ {
-		d.lastBlock[i] = binary.BigEndian.Uint32(d.work.Data[128+i*4 : 132+i*4])
+		// Convert the next block to uint32 array.
+		for i := 0; i < 16; i++ {
+			d.lastBlock[i] = binary.BigEndian.Uint32(d.work.Data[128+i*4 : 132+i*4])
+		}
+	}else{
+		binary.LittleEndian.PutUint32(d.work.Data[192+4*work.Nonce2Word:],
+			d.currentWorkID)
+		// Reset the hash state
+		copy(d.midstate[:], blake256.IV256[:])
+
+		// Hash the three first blocks
+		blake256.Block(d.midstate[:], d.work.Data[0:64], 512)
+		blake256.Block(d.midstate[:], d.work.Data[64:128], 1024)
+		blake256.Block(d.midstate[:], d.work.Data[128:192], 1536)
+		minrLog.Tracef("midstate input data for work update %v",
+			hex.EncodeToString(d.work.Data[0:128]))
+
+		// Convert the next block to uint32 array.
+		for i := 0; i < 16; i++ {
+			d.lastBlock[i] = binary.BigEndian.Uint32(d.work.Data[192+i*4 : 196+i*4])
+		}
 	}
 	minrLog.Tracef("work data for work update: %v",
 		hex.EncodeToString(d.work.Data[:]))
@@ -270,13 +292,23 @@ func (d *Device) foundCandidate(ts, nonce0, nonce1 uint32) {
 	d.Lock()
 	defer d.Unlock()
 	// Construct the final block header.
-	data := make([]byte, 192)
+	data := make([]byte, 256)
 	copy(data, d.work.Data[:])
 
-	binary.BigEndian.PutUint32(data[128+4*work.TimestampWord:], ts)
-	binary.BigEndian.PutUint32(data[128+4*work.Nonce0Word:], nonce0)
-	binary.BigEndian.PutUint32(data[128+4*work.Nonce1Word:], nonce1)
-	hash := chainhash.HashH(data[0:180])
+	var hash chainhash.Hash
+	height := binary.LittleEndian.Uint32(d.work.Data[128:132])
+	if uint64(height) < wire.AI_UPDATE_HEIGHT{
+		binary.BigEndian.PutUint32(data[128+4*work.TimestampWord:], ts)
+		binary.BigEndian.PutUint32(data[128+4*work.Nonce0Word:], nonce0)
+		binary.BigEndian.PutUint32(data[128+4*work.Nonce1Word:], nonce1)
+		hash = chainhash.HashH(data[0:180])
+	}else{
+		binary.BigEndian.PutUint32(data[192+4*work.TimestampWord:], ts)
+		binary.BigEndian.PutUint32(data[192+4*work.Nonce0Word:], nonce0)
+		binary.BigEndian.PutUint32(data[192+4*work.Nonce1Word:], nonce1)
+		hash = chainhash.HashH(data[0:244])
+	}
+
 
 	// Hashes that reach this logic and fail the minimal proof of
 	// work check are considered to be hardware errors.

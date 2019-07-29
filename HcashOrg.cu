@@ -33,6 +33,7 @@ extern "C" {
 /* hash by cpu with blake 256 */
 extern "C" void HcashOrg_hash(void *output, const void *input)
 {
+    printf("extern \"C\" void HcashOrg_hash(void *output, const void *input)  1111111111111\n");
 	sph_blake256_context ctx;
 
 	sph_blake256_set_rounds(14);
@@ -191,14 +192,16 @@ HcashOrg_hash_nonce(uint32_t grid, uint32_t block, uint32_t threads,
 
 extern "C" {
 __host__ DLLEXPORT void
-HcashOrg_cpu_setBlock_52(const uint32_t *input)
+HcashOrg_cpu_setBlock_52(const uint32_t *input, uint32_t updateHeight)
 {
-	/*
-	for (int i = 0; i < 180/4; i++)
-		printf("%08x", input[i]);
-	printf("\n");
-	*/
 /*
+    printf("HcashOrg_cpu_setBlock_52  1111111:\n");
+	for (int i = 0; i < 244/4; i++)
+		printf("%08x", input[i]);
+	printf("  \nHcashOrg_cpu_setBlock_52 end 2222222222\n");
+
+    fflush(stdout);
+
 	Precompute everything possible and pass it on constant memory
 */
 	const uint32_t z[16] = {
@@ -208,6 +211,8 @@ HcashOrg_cpu_setBlock_52(const uint32_t *input)
 		0xC0AC29B7U, 0xC97C50DDU, 0x3F84D5B5U, 0xB5470917U
 	};
 
+    uint32_t height = input[128/4];
+ //   printf("height = %d, updateHeight = %d\n", height, updateHeight);
 	int i=0;
 	uint32_t _ALIGN(64) preXOR[215];
 	uint32_t _ALIGN(64)   data[16];
@@ -217,7 +222,12 @@ HcashOrg_cpu_setBlock_52(const uint32_t *input)
 	sph_blake256_context ctx;
 	sph_blake256_set_rounds(14);
 	sph_blake256_init(&ctx);
-	sph_blake256(&ctx, input, 128);
+	if(height < updateHeight){
+	    sph_blake256(&ctx, input, 128);
+	}else{
+	    sph_blake256(&ctx, input, 192);
+	}
+
 
 	data[ 0] = ctx.H[0];
 	data[ 1] = ctx.H[1];
@@ -227,27 +237,57 @@ HcashOrg_cpu_setBlock_52(const uint32_t *input)
 	data[ 5] = ctx.H[5];
 	data[ 8] = ctx.H[6];
 
-	data[12] = swab32(input[35]);
+#define  BLOCK_OFFSET 16
+    if(height < updateHeight){
+	    data[12] = swab32(input[35]);
+	}else{
+	    data[12] = swab32(input[35 + BLOCK_OFFSET]);
+	}
 	data[13] = ctx.H[7];
 
-	// pre swab32
-	m[ 0] = swab32(input[32]);	m[ 1] = swab32(input[33]);
-	m[ 2] = swab32(input[34]);	m[ 3] = 0;
-	m[ 4] = swab32(input[36]);	m[ 5] = swab32(input[37]);
-	m[ 6] = swab32(input[38]);	m[ 7] = swab32(input[39]);
-	m[ 8] = swab32(input[40]);	m[ 9] = swab32(input[41]);
-	m[10] = swab32(input[42]);	m[11] = swab32(input[43]);
-	m[12] = swab32(input[44]);	m[13] = 0x80000001;
-	m[14] = 0;
-	m[15] = 0x000005a0;
 
+	// pre swab32
+	if(height < updateHeight){
+        m[ 0] = swab32(input[32]);	m[ 1] = swab32(input[33]);
+        m[ 2] = swab32(input[34]);	m[ 3] = 0;
+        m[ 4] = swab32(input[36]);	m[ 5] = swab32(input[37]);
+        m[ 6] = swab32(input[38]);	m[ 7] = swab32(input[39]);
+        m[ 8] = swab32(input[40]);	m[ 9] = swab32(input[41]);
+        m[10] = swab32(input[42]);	m[11] = swab32(input[43]);
+        m[12] = swab32(input[44]);	m[13] = 0x80000001;
+	}else{
+	    m[ 0] = swab32(input[32 + BLOCK_OFFSET]);	m[ 1] = swab32(input[33 + BLOCK_OFFSET]);
+    	m[ 2] = swab32(input[34 + BLOCK_OFFSET]);	m[ 3] = 0;
+    	m[ 4] = swab32(input[36 + BLOCK_OFFSET]);	m[ 5] = swab32(input[37 + BLOCK_OFFSET]);
+    	m[ 6] = swab32(input[38 + BLOCK_OFFSET]);	m[ 7] = swab32(input[39 + BLOCK_OFFSET]);
+    	m[ 8] = swab32(input[40 + BLOCK_OFFSET]);	m[ 9] = swab32(input[41 + BLOCK_OFFSET]);
+    	m[10] = swab32(input[42 + BLOCK_OFFSET]);	m[11] = swab32(input[43 + BLOCK_OFFSET]);
+    	m[12] = swab32(input[44 + BLOCK_OFFSET]);	m[13] = 0x80000001;
+	}
+	m[14] = 0;
+	if(height < updateHeight){
+		m[15] = 0x000005a0;
+	}else{
+		m[15] = 0x000007a0;
+	}
+/*
+    printf("hash 123456 :\n");
+    for (int i = 0; i < 8; i++)
+		printf("%08x", ctx.H[i]);
+	printf("\nhash 123456 :\n");
+    printf("HcashOrg_cpu_setBlock_52  1111111:\n");
+	for (int i = 0; i < 16; i++)
+		printf("%08x", m[i]);
+	printf("  \nHcashOrg_cpu_setBlock_52 end 2222222222\n");
+    fflush(stdout);
+*/
 	h[ 0] = data[ 8];
 	h[ 1] = data[13];
 
 	CUDA_SAFE_CALL(cudaMemcpyToSymbol(c_h,h, 8, 0, cudaMemcpyHostToDevice));
 
 	data[ 0]+= (m[ 0] ^ z[1]) + data[ 4];
-	data[12]  = SPH_ROTR32(z[4] ^ SPH_C32(0x5A0) ^ data[ 0], 16);
+	data[12]  = SPH_ROTR32(z[4] ^ SPH_C32( height < updateHeight ? 0x5A0: 0x7A0) ^ data[ 0], 16);
 
 	data[ 8] = z[0]+data[12];
 	data[ 4] = SPH_ROTR32(data[ 4] ^ data[ 8], 12);
@@ -257,7 +297,7 @@ HcashOrg_cpu_setBlock_52(const uint32_t *input)
 	data[ 4] = SPH_ROTR32(data[ 4] ^ data[ 8], 7);
 
 	data[ 1]+= (m[ 2] ^ z[3]) + data[ 5];
-	data[13] = SPH_ROTR32((z[5] ^ SPH_C32(0x5A0)) ^ data[ 1], 16);
+	data[13] = SPH_ROTR32((z[5] ^ SPH_C32(height < updateHeight ? 0x5A0: 0x7A0)) ^ data[ 1], 16);
 	data[ 9] = z[1]+data[13];
 	data[ 5] = SPH_ROTR32(data[ 5] ^ data[ 9], 12);
 	data[ 1]+= data[ 5]; //+nonce ^ ...
