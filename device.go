@@ -310,7 +310,7 @@ func (d *Device) foundCandidate(ts, nonce0, nonce1 uint32) {
 		binary.BigEndian.PutUint32(data[192+4*work.TimestampWord:], ts)
 		binary.BigEndian.PutUint32(data[192+4*work.Nonce0Word:], nonce0)
 		binary.BigEndian.PutUint32(data[192+4*work.Nonce1Word:], nonce1)
-		hash = chainhash.HashH(data[0:244])
+		hash = chainhash.HashH(data[64:244])
 	}
 
 

@@ -91,7 +91,7 @@ type Device struct {
 	quit chan struct{}
 }
 
-func HcashOrgCPUSetBlock52(input *[256]byte) {
+func HcashOrgCPUSetBlock52(input *[192]byte) {
 	if input == nil {
 		panic("input is nil")
 	}
@@ -303,8 +303,7 @@ func (d *Device) runDevice() error {
 	}
 	nonceResultsHSlice := *(*[]uint32)(unsafe.Pointer(&nonceResultsHSliceHeader))
 
-	endianData := new([256]byte)
-
+	endianData := new([192]byte)
 
 	for {
 		d.updateCurrentWork()
@@ -333,7 +332,7 @@ func (d *Device) runDevice() error {
 			HcashOrgCPUSetBlock52(endianData)
 		}else {
 			copy(endianData[:], d.work.Data[64:192])
-			for i, j := 192, 0; i < 244; {
+			for i, j := 128, 0; i < 180; {
 				b := make([]byte, 4)
 				binary.BigEndian.PutUint32(b, d.lastBlock[j])
 				copy(endianData[i:], b)
