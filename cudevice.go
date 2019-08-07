@@ -91,11 +91,11 @@ type Device struct {
 	quit chan struct{}
 }
 
-func HcashOrgCPUSetBlock52(input *[256]byte, updateHeight uint32) {
+func HcashOrgCPUSetBlock52(input *[256]byte) {
 	if input == nil {
 		panic("input is nil")
 	}
-	C.HcashOrg_cpu_setBlock_52((*C.uint32_t)(unsafe.Pointer(input)), (C.uint32_t)(updateHeight))
+	C.HcashOrg_cpu_setBlock_52((*C.uint32_t)(unsafe.Pointer(input)))
 }
 
 func HcashOrgHashNonce(gridx, blockx, threads uint32, startNonce uint32, nonceResults cu.DevicePtr, targetHigh uint32) {
@@ -330,9 +330,9 @@ func (d *Device) runDevice() error {
 				i += 4
 				j++
 			}
-			HcashOrgCPUSetBlock52(endianData, uint32(wire.AI_UPDATE_HEIGHT))
+			HcashOrgCPUSetBlock52(endianData)
 		}else {
-			copy(endianData[:], d.work.Data[:192])
+			copy(endianData[:], d.work.Data[64:192])
 			for i, j := 192, 0; i < 244; {
 				b := make([]byte, 4)
 				binary.BigEndian.PutUint32(b, d.lastBlock[j])
@@ -340,7 +340,7 @@ func (d *Device) runDevice() error {
 				i += 4
 				j++
 			}
-			HcashOrgCPUSetBlock52(endianData, uint32(wire.AI_UPDATE_HEIGHT))
+			HcashOrgCPUSetBlock52(endianData)
 		}
 
 

@@ -37,7 +37,7 @@ var (
 	defaultRPCCertFile    = filepath.Join(hcdHomeDir, "rpc.cert")
 	defaultRPCPortMainNet = "14009" //"9109"
 	defaultRPCPortTestNet = "12009" //"19109"
-	defaultRPCPortSimNet  = "19556"
+	defaultRPCPortSimNet  = "13009"
 	defaultAPIHost        = "localhost"
 	defaultAPIPort        = "3333"
 	defaultLogDir         = filepath.Join(minerHomeDir, defaultLogDirname)

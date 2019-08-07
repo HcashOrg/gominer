@@ -9,7 +9,7 @@ extern "C" {
 
 void	HcashOrg_hash_nonce(uint32_t grid, uint32_t block, uint32_t threads,
 	    uint32_t startNonce, uint32_t *resNonce, uint32_t targetHigh);
-void	HcashOrg_cpu_setBlock_52(const uint32_t *input, uint32_t updateHeight);
+void	HcashOrg_cpu_setBlock_52(const uint32_t *input);
 
 #ifdef __cplusplus
 }
